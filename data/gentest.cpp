@@ -11,18 +11,17 @@
 #define DEBUG(a) {cerr << #a << ": " << (a) << endl; fflush(stderr); }
 
 using namespace std;
-template<class T> string i2s(T x) {ostringstream o; o << x; return o.str();}
 typedef pair<int, int> II;
 
 ifstream fin("targets.txt");
 ofstream fout("input.fasta");
 
 inline char print_code(int c) {
-  if (c == 0) return 'A';
-  if (c == 1) return 'T';
-  if (c == 2) return 'C';
-  if (c == 3) return 'G';
-  return 'N';
+    if (c == 0) return 'A';
+    if (c == 1) return 'T';
+    if (c == 2) return 'C';
+    if (c == 3) return 'G';
+    return 'N';
 }
 
 vector<string> tokenize(const string& row) {
@@ -38,22 +37,24 @@ vector<string> tokenize(const string& row) {
 }
 
 string add_noise(string t, int subLength, int errorRate){
-	string ans = "";
-	int numDI = 4*errorRate*subLength / 1000; /// insert, delete
-	int numFF = 6*errorRate*subLength / 1000; /// replace
-	for(int i = 0; i < t.size(); i += subLength){
+    if(errorRate == 0) return t;
+
+    string ans = "";
+    int numDI = 4*errorRate*subLength / 1000; /// insert, delete
+    int numFF = 6*errorRate*subLength / 1000; /// replace
+    for(int i = 0; i < t.size(); i += subLength){
         string s = t.substr(i, subLength);
-		set<int> S;
-		FOR(step,1,100) {
-			if(S.size() == numFF) break;
-			S.insert(rand()%subLength);
-		}
-		for(auto pos : S){
-			char c = s[pos];
-			while(c == s[pos]){
-				s[pos] = print_code(rand()%4);
-			}
-		}
+        set<int> S;
+        FOR(step,1,100) {
+            if(S.size() == numFF) break;
+            S.insert(rand()%subLength);
+        }
+        for(auto pos : S){
+            char c = s[pos];
+            while(c == s[pos]){
+                s[pos] = print_code(rand()%4);
+            }
+        }
 
         int num_delete = rand()%numDI;
         FOR(step, 1, num_delete){
@@ -66,8 +67,8 @@ string add_noise(string t, int subLength, int errorRate){
             s.insert(s.begin()+pos, c);
         }
         ans += s;
-	}
-	return ans;
+    }
+    return ans;
 }
 
 const int maxn = 20000;
@@ -77,23 +78,21 @@ set<string> S;
 int cntID = 0, Kmer = 31;
 LL full_length = 0;
 
-void solve(const string &genome, const string taxa, int readLength, int errorRate){
+void generate_reads(const string &genome, const string taxa, int readLength, int errorRate) {
     int maxx = genome.size();
-	FOR(i,1,10000){
-	    cntID++;
-        LL pos = 1LL*rand()*rand() % (maxx - 4001);
-        string tmp = genome.substr(pos, 4000);
+    FOR(i,1,10000){
+        cntID++;
+        LL pos = 1LL*rand()*rand() % (maxx - 5001);
+        string tmp = genome.substr(pos, 5000);
         FO(i,0,tmp.size()) if(tmp[i] == 'x') tmp[i] = 'A';
-//        fout << ">ide" << cntID << " " << taxa << endl;
-//        fout << tmp.substr(0,1000) << endl;
+
         string tmp2 = add_noise(tmp, 500, errorRate);
         fout << ">ide" << cntID << " " << taxa << endl;
         fout << tmp2.substr(0,readLength) << endl;
-	}
-
+    }
 }
 
-void generate_data() {
+void solve(int readLength, int errorRate) {
     int id;
     string genome = "";
     while(1) {
@@ -111,31 +110,29 @@ void generate_data() {
         if(maxx > 10000) break;
     }
 
-    int readLength = 1000, errorRate = 18;
-	cerr << "id = " << id << " " << genome.size() << endl;
-	cerr << file[id] << " " << taxa[id] << endl;
-	cerr << "readLength = " << readLength << "  errorRate = " << errorRate << endl;
-    solve(genome, taxa[id], readLength, errorRate);
+    cerr << "id = " << id << ", genome size = " << genome.size() << endl;
+    cerr << file[id] << " " << taxa[id] << endl;
+    cerr << "readLength = " << readLength << ", errorRate = " << errorRate << endl;
+    generate_reads(genome, taxa[id], readLength, errorRate);
 }
 
+int main(int argc, char **argv) {
+    srand(time(0));
+    string s, t[8];
+    int readLength = atoi(argv[1]);
+    int errorRate = atoi(argv[2]);
 
+    while(fin >> s){
+        cntFiles++;
+        file[cntFiles] = "../CDKAM/" + s;
+        //cerr << file[cntFiles] << endl;
+        FOR(i,1,7) fin >> t[i];
+        if(t[1] != "-1" && t[2] != "UNKNOWN"){
+            taxa[cntFiles] = t[7] + ' ' + t[6] + ' ' + t[5] + ' ' + t[4] + ' ' + t[3] + ' ' + t[2] + ' ' + t[1];
+        }
+    }
 
-int main(){
-	srand(time(0));
-	string s, t[8];
+    solve(readLength, errorRate);
 
-	while(fin >> s){
-		cntFiles++;	//if(cntFiles == 5) break;
-		file[cntFiles] = "../CDKAM/" + s;
-		//cerr << file[cntFiles] << endl;
-		FOR(i,1,7) fin >> t[i];
-		if(t[1] != "-1" && t[2] != "UNKNOWN"){
-			taxa[cntFiles] = t[7] + ' ' + t[6] + ' ' + t[5] + ' ' + t[4] + ' ' + t[3] + ' ' + t[2] + ' ' + t[1];
-		}
-	}
-
-    generate_data();
-
-
-	return 0;
+    return 0;
 }
